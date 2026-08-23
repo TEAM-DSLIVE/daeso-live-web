@@ -1,31 +1,32 @@
+import { useCallback } from "react";
 import { RouteParams, Routes, useRouter } from "@b1nd/aid-kit/navigation";
 import { AppPages } from "../pages/AppPages";
 import { Navigate, Page } from "../shared/navigation";
 
 function AIDRoute({ page, params }: { page: Page; params?: RouteParams }) {
   const { tab, stack } = useRouter();
-  const currentStack = stack.current;
-  const currentStackPath = currentStack[currentStack.length - 1]?.path;
+  const { move } = tab;
+  const { pop, push } = stack;
 
-  const onNavigate: Navigate = (target) => {
+  const onNavigate = useCallback<Navigate>((target) => {
     if (target === "home") {
-      if (currentStack.length) stack.pop();
-      if (tab.current !== "/") tab.move("/");
+      pop();
+      move("/");
       return;
     }
 
-    if (target === "settings" && (currentStackPath === "/privacy" || currentStackPath === "/support")) {
-      stack.pop();
+    if (target === "settings" && (page === "privacy" || page === "support")) {
+      pop();
       return;
     }
 
-    if (target === "admin" && currentStackPath?.startsWith("/admin/")) {
-      stack.pop();
+    if (target === "admin" && page === "admin-chat") {
+      pop();
       return;
     }
 
-    stack.push(`/${target}`);
-  };
+    push(`/${target}`);
+  }, [move, page, pop, push]);
 
   return <AppPages route={{ page, userId: params?.userId }} onNavigate={onNavigate} />;
 }
