@@ -1,7 +1,26 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { RouteParams, Routes, useRouter } from "@b1nd/aid-kit/navigation";
+import { RandomChat } from "../features/random-chat/RandomChat";
 import { AppPages } from "../pages/AppPages";
 import { Navigate, Page } from "../shared/navigation";
+
+type RandomPage = Extract<Page, "waiting" | "matching" | "chat" | "ended" | "connection-error" | "send-failed">;
+const RANDOM_PAGES = new Set<string>(["waiting", "matching", "chat", "ended", "connection-error", "send-failed"]);
+
+function RandomFlowRoute() {
+  const [page, setPage] = useState<RandomPage>("matching");
+  const { pop } = useRouter().stack;
+
+  const onNavigate = useCallback<Navigate>((target) => {
+    if (target === "home") {
+      pop();
+      return;
+    }
+    if (RANDOM_PAGES.has(target)) setPage(target as RandomPage);
+  }, [pop]);
+
+  return <RandomChat page={page} onNavigate={onNavigate} />;
+}
 
 function AIDRoute({ page, params }: { page: Page; params?: RouteParams }) {
   const { tab, stack } = useRouter();
@@ -25,6 +44,11 @@ function AIDRoute({ page, params }: { page: Page; params?: RouteParams }) {
       return;
     }
 
+    if (RANDOM_PAGES.has(target)) {
+      push("/random");
+      return;
+    }
+
     push(`/${target}`);
   }, [move, page, pop, push]);
 
@@ -36,12 +60,7 @@ const page = (name: Page) => () => <AIDRoute page={name} />;
 export const routes: Routes = {
   tabs: [{ path: "/", index: true, element: page("home") }],
   stacks: [
-    { path: "/waiting", element: page("waiting") },
-    { path: "/matching", element: page("matching") },
-    { path: "/chat", element: page("chat") },
-    { path: "/ended", element: page("ended") },
-    { path: "/connection-error", element: page("connection-error") },
-    { path: "/send-failed", element: page("send-failed") },
+    { path: "/random", element: () => <RandomFlowRoute /> },
     { path: "/settings", element: page("settings") },
     { path: "/privacy", element: page("privacy") },
     { path: "/support", element: page("support") },

@@ -5,7 +5,7 @@ import { RouteProvider, Router } from "@b1nd/aid-kit/navigation";
 import { SafeAreaProvider } from "@b1nd/aid-kit/safe-area-provider";
 import { routes } from "./routes";
 
-const ROUTE_STATE_VERSION = 1;
+const ROUTE_STATE_VERSION = 2;
 
 function RouteStateMigration({ children }: { children: ReactNode }) {
   const [version, setVersion] = useAppState(0, "daeso-live::route-state-version");
