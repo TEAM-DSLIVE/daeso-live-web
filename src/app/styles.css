@@ -417,6 +417,7 @@ button.menu-card {
   .phone-screen {
     height: 100dvh;
     min-height: 0;
-    padding: max(24px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+    padding: max(24px, var(--aid-safe-top, 0px), env(safe-area-inset-top)) 16px
+      max(24px, var(--aid-safe-bottom, 0px), env(safe-area-inset-bottom));
   }
 }

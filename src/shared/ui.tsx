@@ -1,4 +1,5 @@
-import { FormEvent, ReactNode } from "react";
+import { FormEvent, ReactNode, CSSProperties } from "react";
+import { useSafeArea } from "@b1nd/aid-kit/safe-area-provider";
 import errorDot from "./assets/error-dot.svg";
 import onlineDot from "./assets/online-dot.svg";
 import { Message, MessageViewer, messageSide } from "./chat";
@@ -13,8 +14,14 @@ type PhoneScreenProps = {
 };
 
 export function PhoneScreen({ title, action, children, footer, centered = false, spacious = false }: PhoneScreenProps) {
+  const { top, bottom } = useSafeArea();
+  const safeAreaStyle = {
+    "--aid-safe-top": `${top}px`,
+    "--aid-safe-bottom": `${bottom}px`,
+  } as CSSProperties;
+
   return (
-    <main className="phone-screen">
+    <main className="phone-screen" style={safeAreaStyle}>
       <section className="phone-panel">
         <header className="phone-header">
           <h1>{title}</h1>

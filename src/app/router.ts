@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { parseRoute } from "../shared/navigation";
 
+// Legacy parser retained for pure route tests; active app navigation uses AID RouteProvider.
 export function navigate(path: string) {
   window.location.hash = path;
 }
