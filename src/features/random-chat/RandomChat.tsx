@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Message } from "../../shared/chat";
 import { Navigate, Page } from "../../shared/navigation";
 import { ActionButton, ChatThread, EmptyState, MessageComposer, PhoneScreen, StatusIndicator } from "../../shared/ui";
@@ -17,12 +17,6 @@ export function RandomChat({ page, onNavigate }: { page: RandomChatPage; onNavig
   const [messages, setMessages] = useState(INITIAL_MESSAGES);
   const [input, setInput] = useState("");
   const [failedDraft, setFailedDraft] = useState("");
-
-  useEffect(() => {
-    if (page !== "matching") return;
-    const timer = window.setTimeout(() => onNavigate("chat"), 1200);
-    return () => window.clearTimeout(timer);
-  }, [onNavigate, page]);
 
   const endedMessages = useMemo(
     () => [...messages, { id: "ended", sender: "system" as const, text: "대화가 끝났어요" }],
