@@ -2,6 +2,7 @@ import { createContext, type ReactNode, useCallback, useContext, useEffect, useS
 import { Actions, useBridgeProvider } from "@b1nd/aid-kit/bridge-kit/web";
 import { ApiClient, ApiError, type AuthSession, type Role } from "../shared/api";
 import { ActionButton, EmptyState, PhoneScreen } from "../shared/ui";
+import { readAidTokenFromSearch } from "./aid-auth";
 
 type AuthStatus = "loading" | "authenticated" | "error";
 
@@ -37,7 +38,19 @@ function readAidToken(value: unknown) {
 function authErrorMessage(error: unknown) {
   if (error instanceof ApiError && error.status === 403) return "이 서비스에 접근할 수 없는 계정이에요.";
   if (error instanceof ApiError && error.status === 0) return "서버에 연결할 수 없어요.";
+  if (error instanceof Error && ["NOT_SUPPORT", "NOT_SUPPORTED"].includes(error.message)) {
+    return "도담도담 인증 토큰을 받을 수 없어요.";
+  }
   return error instanceof Error ? error.message : "인증에 실패했어요.";
+}
+
+function takeAidTokenFromUrl() {
+  const token = readAidTokenFromSearch(window.location.search);
+  if (!token) return null;
+  const url = new URL(window.location.href);
+  url.searchParams.delete("token");
+  window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+  return token;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -87,7 +100,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return {};
     });
     const localAidToken = import.meta.env.DEV ? import.meta.env.VITE_DAESO_LIVE_AID_TOKEN : undefined;
+    const urlAidToken = localAidToken ? null : takeAidTokenFromUrl();
     if (localAidToken) void authenticate(localAidToken);
+    else if (urlAidToken) void authenticate(urlAidToken);
     else send(Actions.OAUTH_GET_TOKEN);
     return () => {
       active = false;
