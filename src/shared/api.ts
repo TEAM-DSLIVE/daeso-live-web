@@ -1,3 +1,5 @@
+import { normalizeApiBaseUrl } from "./api-base";
+
 export type Role = "USER" | "ADMIN";
 
 export type AuthSession = {
@@ -64,7 +66,10 @@ export class ApiError extends Error {
 type JsonObject = Record<string, unknown>;
 type SessionListener = (session: AuthSession | null) => void;
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080").replace(/\/+$/, "");
+const configuredApiBaseUrl =
+  import.meta.env?.VITE_SERVER_URL?.trim() || import.meta.env?.VITE_API_BASE_URL?.trim() || "http://localhost:8080";
+const API_BASE_URL = normalizeApiBaseUrl(configuredApiBaseUrl);
+const HTTP_API_BASE_URL = import.meta.env.VITE_USE_API_PROXY === "true" ? "" : API_BASE_URL;
 
 function isObject(value: unknown): value is JsonObject {
   return typeof value === "object" && value !== null;
@@ -330,7 +335,7 @@ export class ApiClient {
     const headers = new Headers(init.headers);
     if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
     try {
-      return await window.fetch(`${API_BASE_URL}${path}`, { ...init, headers });
+      return await window.fetch(`${HTTP_API_BASE_URL}${path}`, { ...init, headers });
     } catch {
       throw new ApiError("서버에 연결할 수 없어요.", 0);
     }
