@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { createRoomKeyState, decryptText, deriveRoomKey, encryptText } from "../src/features/random-chat/crypto.ts";
 import { messageSide } from "../src/shared/chat.ts";
 import { parseRoute } from "../src/shared/navigation.ts";
 
@@ -16,4 +17,14 @@ test("support messages flip sides for user and admin", () => {
   assert.equal(messageSide("user", "admin"), "them");
   assert.equal(messageSide("admin", "admin"), "me");
   assert.equal(messageSide("admin", "user"), "them");
+});
+
+test("random chat key exchange encrypts and decrypts in memory", async () => {
+  const first = await createRoomKeyState();
+  const second = await createRoomKeyState();
+  await deriveRoomKey(first, second.publicMaterial);
+  await deriveRoomKey(second, first.publicMaterial);
+
+  const encrypted = await encryptText(first.sharedKey, "비밀 메시지");
+  assert.equal(await decryptText(second.sharedKey, encrypted.ciphertext, encrypted.iv), "비밀 메시지");
 });

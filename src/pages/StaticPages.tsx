@@ -1,7 +1,24 @@
+import { useEffect, useState } from "react";
+import { ApiClient, type ChatState } from "../shared/api";
 import { Navigate } from "../shared/navigation";
 import { ActionButton, EmptyState, InfoCard, MenuCard, PhoneScreen } from "../shared/ui";
 
-export function HomePage({ onNavigate }: { onNavigate: Navigate }) {
+export function HomePage({ api, onNavigate }: { api: ApiClient; onNavigate: Navigate }) {
+  const [chatState, setChatState] = useState<ChatState | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void api.getChatState().then((nextState) => {
+      if (active) setChatState(nextState);
+    }).catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [api]);
+
+  const hasActiveChat = chatState?.state === "WAITING" || chatState?.state === "IN_ROOM";
+  const actionLabel = chatState?.state === "IN_ROOM" ? "대화로 돌아가기" : chatState?.state === "WAITING" ? "매칭으로 돌아가기" : "랜덤매칭 시작";
+
   return (
     <PhoneScreen
       title="대소라이브"
@@ -11,13 +28,27 @@ export function HomePage({ onNavigate }: { onNavigate: Navigate }) {
         </button>
       }
       centered
-      footer={<ActionButton onClick={() => onNavigate("matching")}>랜덤매칭 시작</ActionButton>}
+      footer={<ActionButton onClick={() => onNavigate("matching")}>{actionLabel}</ActionButton>}
     >
       <EmptyState>
-        대소고 학생들과
-        <br />
-        가볍게 대화해보세요
+        {hasActiveChat ? (
+          chatState?.state === "IN_ROOM" ? "진행 중인 대화가 있어요" : "매칭을 기다리고 있어요"
+        ) : (
+          <>
+            대소고 학생들과
+            <br />
+            가볍게 대화해보세요
+          </>
+        )}
       </EmptyState>
+    </PhoneScreen>
+  );
+}
+
+export function AccessDeniedPage({ onNavigate }: { onNavigate: Navigate }) {
+  return (
+    <PhoneScreen title="대소라이브" footer={<ActionButton onClick={() => onNavigate("home")}>홈으로</ActionButton>} centered>
+      <EmptyState>접근할 수 없는 화면이에요</EmptyState>
     </PhoneScreen>
   );
 }

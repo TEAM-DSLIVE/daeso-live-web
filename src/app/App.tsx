@@ -3,6 +3,7 @@ import { AppStateProvider, useAppState } from "@b1nd/aid-kit/app-state";
 import { BridgeProvider } from "@b1nd/aid-kit/bridge-kit/web";
 import { RouteProvider, Router } from "@b1nd/aid-kit/navigation";
 import { SafeAreaProvider } from "@b1nd/aid-kit/safe-area-provider";
+import { AuthGate, AuthProvider } from "./session";
 import { routes } from "./routes";
 
 const ROUTE_STATE_VERSION = 2;
@@ -28,11 +29,15 @@ export default function App() {
     <BridgeProvider>
       <SafeAreaProvider>
         <AppStateProvider>
-          <RouteStateMigration>
-            <RouteProvider routes={routes}>
-              <Router routes={routes} />
-            </RouteProvider>
-          </RouteStateMigration>
+          <AuthProvider>
+            <AuthGate>
+              <RouteStateMigration>
+                <RouteProvider routes={routes}>
+                  <Router routes={routes} />
+                </RouteProvider>
+              </RouteStateMigration>
+            </AuthGate>
+          </AuthProvider>
         </AppStateProvider>
       </SafeAreaProvider>
     </BridgeProvider>

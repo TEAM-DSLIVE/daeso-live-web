@@ -1,34 +1,41 @@
+import { ApiClient, type Role } from "../shared/api";
 import { AdminInquiry } from "../features/admin-inquiry/AdminInquiry";
 import { RandomChat } from "../features/random-chat/RandomChat";
 import { SupportChat } from "../features/support-chat/SupportChat";
-import { useSupportThreads } from "../features/support-chat/model";
+import { useSupportChat } from "../features/support-chat/model";
 import { Navigate, Route } from "../shared/navigation";
-import { HomePage, PrivacyPage, SettingsPage } from "./StaticPages";
+import { AccessDeniedPage, HomePage, PrivacyPage, SettingsPage } from "./StaticPages";
 
-export function AppPages({ route, onNavigate }: { route: Route; onNavigate: Navigate }) {
-  const support = useSupportThreads();
+export function AppPages({ api, role, route, onNavigate }: { api: ApiClient; role: Role; route: Route; onNavigate: Navigate }) {
+  const support = useSupportChat(api, route.page === "support");
 
   if (route.page === "settings") return <SettingsPage onNavigate={onNavigate} />;
   if (route.page === "privacy") return <PrivacyPage onNavigate={onNavigate} />;
   if (route.page === "support") {
     return (
       <SupportChat
-        messages={support.messagesByUser.A17}
+        messages={support.messages}
+        loading={support.loading}
+        loadingOlder={support.loadingOlder}
+        sending={support.sending}
+        error={support.error}
+        hasOlder={Boolean(support.nextCursor)}
+        onLoadOlder={() => void support.loadOlder()}
         onNavigate={onNavigate}
-        onSend={(value) => support.send("A17", "user", value)}
+        onSend={support.send}
       />
     );
   }
   if (route.page === "admin" || route.page === "admin-chat") {
+    if (role !== "ADMIN") return <AccessDeniedPage onNavigate={onNavigate} />;
     return (
       <AdminInquiry
-        userId={route.page === "admin-chat" ? route.userId : undefined}
-        messagesByUser={support.messagesByUser}
+        api={api}
+        threadId={route.page === "admin-chat" ? route.userId : undefined}
         onNavigate={onNavigate}
-        onSend={(userId, value) => support.send(userId, "admin", value)}
       />
     );
   }
-  if (route.page !== "home") return <RandomChat page={route.page} onNavigate={onNavigate} />;
-  return <HomePage onNavigate={onNavigate} />;
+  if (route.page !== "home") return <RandomChat api={api} page={route.page} onNavigate={onNavigate} />;
+  return <HomePage api={api} onNavigate={onNavigate} />;
 }
