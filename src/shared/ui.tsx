@@ -64,11 +64,12 @@ type MessageComposerProps = {
   value: string;
   placeholder: string;
   disabled?: boolean;
+  maxLength?: number;
   onChange?: (value: string) => void;
   onSend?: () => void;
 };
 
-export function MessageComposer({ value, placeholder, disabled = false, onChange, onSend }: MessageComposerProps) {
+export function MessageComposer({ value, placeholder, disabled = false, maxLength, onChange, onSend }: MessageComposerProps) {
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!disabled && value.trim()) onSend?.();
@@ -82,6 +83,7 @@ export function MessageComposer({ value, placeholder, disabled = false, onChange
         onChange={(event) => onChange?.(event.target.value)}
         placeholder={placeholder}
         value={value}
+        maxLength={maxLength}
       />
       <button aria-label="전송" disabled={disabled || !value.trim()} type="submit">
         ↑

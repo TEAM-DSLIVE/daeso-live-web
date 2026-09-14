@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import { RouteParams, Routes, useRouter } from "@b1nd/aid-kit/navigation";
+import { useAuth } from "./session";
 import { RandomChat } from "../features/random-chat/RandomChat";
 import { AppPages } from "../pages/AppPages";
 import { Navigate, Page } from "../shared/navigation";
@@ -8,6 +9,7 @@ type RandomPage = Extract<Page, "waiting" | "matching" | "chat" | "ended" | "con
 const RANDOM_PAGES = new Set<string>(["waiting", "matching", "chat", "ended", "connection-error", "send-failed"]);
 
 function RandomFlowRoute() {
+  const { api } = useAuth();
   const [page, setPage] = useState<RandomPage>("matching");
   const { pop } = useRouter().stack;
 
@@ -19,10 +21,11 @@ function RandomFlowRoute() {
     if (RANDOM_PAGES.has(target)) setPage(target as RandomPage);
   }, [pop]);
 
-  return <RandomChat page={page} onNavigate={onNavigate} />;
+  return <RandomChat api={api} page={page} onNavigate={onNavigate} />;
 }
 
 function AIDRoute({ page, params }: { page: Page; params?: RouteParams }) {
+  const { api, role } = useAuth();
   const { tab, stack } = useRouter();
   const { move } = tab;
   const { pop, push } = stack;
@@ -52,7 +55,7 @@ function AIDRoute({ page, params }: { page: Page; params?: RouteParams }) {
     push(`/${target}`);
   }, [move, page, pop, push]);
 
-  return <AppPages route={{ page, userId: params?.userId }} onNavigate={onNavigate} />;
+  return <AppPages api={api} role={role ?? "USER"} route={{ page, userId: params?.userId }} onNavigate={onNavigate} />;
 }
 
 const page = (name: Page) => () => <AIDRoute page={name} />;

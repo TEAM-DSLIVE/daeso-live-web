@@ -1,59 +1,19 @@
-import { useMemo, useState } from "react";
-import { Message } from "../../shared/chat";
+import { useState } from "react";
+import { ApiClient } from "../../shared/api";
 import { Navigate, Page } from "../../shared/navigation";
 import { ActionButton, ChatThread, EmptyState, MessageComposer, PhoneScreen, StatusIndicator } from "../../shared/ui";
-
-const INITIAL_MESSAGES: Message[] = [
-  { id: "r1", sender: "system", text: "익명의 상대와 연결됐어요" },
-  { id: "r2", sender: "stranger", text: "안녕! 오늘 뭐해?" },
-  { id: "r3", sender: "user", text: "방금 퇴근했어 ㅋㅋ 너는?" },
-  { id: "r4", sender: "stranger", text: "난 야식 고민 중. 라면 vs 치킨" },
-  { id: "r5", sender: "user", text: "고민할 게 있나 치킨" },
-];
+import { useRandomChat } from "./model";
 
 type RandomChatPage = Extract<Page, "waiting" | "matching" | "chat" | "ended" | "connection-error" | "send-failed">;
 
-export function RandomChat({ page, onNavigate }: { page: RandomChatPage; onNavigate: Navigate }) {
-  const [messages, setMessages] = useState(INITIAL_MESSAGES);
+export function RandomChat({ api, page, onNavigate }: { api: ApiClient; page: RandomChatPage; onNavigate: Navigate }) {
   const [input, setInput] = useState("");
-  const [failedDraft, setFailedDraft] = useState("");
-
-  const endedMessages = useMemo(
-    () => [...messages, { id: "ended", sender: "system" as const, text: "대화가 끝났어요" }],
-    [messages],
-  );
-
-  const failedMessages = useMemo(
-    () => [{ id: "failed", sender: "system" as const, text: "전송에 실패했어요", tone: "danger" as const }, ...messages],
-    [messages],
-  );
-
-  const startMatching = () => {
-    setMessages(INITIAL_MESSAGES);
-    setInput("");
-    onNavigate("matching");
-  };
-
-  const send = () => {
-    const text = input.trim();
-    if (!text) return;
-    if (!navigator.onLine) {
-      setFailedDraft(text);
-      setInput("");
-      onNavigate("send-failed");
-      return;
-    }
-    setMessages((current) => [...current, { id: crypto.randomUUID(), sender: "user", text }]);
-    setInput("");
-  };
-
-  const retry = () => {
-    const text = failedDraft.trim();
-    if (!text || !navigator.onLine) return;
-    setMessages((current) => [...current, { id: crypto.randomUUID(), sender: "user", text }]);
-    setFailedDraft("");
-    onNavigate("chat");
-  };
+  const chat = useRandomChat(api, page, onNavigate);
+  const endedMessages = [...chat.messages, { id: "ended", sender: "system" as const, text: chat.endMessage }];
+  const failedMessages = [
+    { id: "failed", sender: "system" as const, text: "전송에 실패했어요", tone: "danger" as const },
+    ...chat.messages,
+  ];
 
   if (page === "connection-error") {
     return (
@@ -61,7 +21,7 @@ export function RandomChat({ page, onNavigate }: { page: RandomChatPage; onNavig
         title="대소라이브"
         action={<StatusIndicator status="error" />}
         centered
-        footer={<ActionButton onClick={startMatching}>다시 찾기</ActionButton>}
+        footer={<ActionButton onClick={chat.startMatching}>다시 찾기</ActionButton>}
       >
         <EmptyState>
           연결이 끊겼어요
@@ -81,7 +41,7 @@ export function RandomChat({ page, onNavigate }: { page: RandomChatPage; onNavig
         footer={
           <>
             <MessageComposer disabled value="" placeholder="연결되면 입력할 수 있어요" />
-            <ActionButton variant="outline" onClick={() => onNavigate("home")}>
+            <ActionButton variant="outline" onClick={chat.cancelMatching}>
               취소
             </ActionButton>
           </>
@@ -105,14 +65,20 @@ export function RandomChat({ page, onNavigate }: { page: RandomChatPage; onNavig
         footer={
           <>
             <MessageComposer disabled value="" placeholder="연결되면 입력할 수 있어요" />
-            <ActionButton onClick={startMatching}>찾기</ActionButton>
+            <ActionButton onClick={chat.findPartner}>찾기</ActionButton>
           </>
         }
       >
         <EmptyState>
           아직 연결된 상대가 없어요
           <br />
-          아래 찾기를 누르면 바로 연결돼요
+          아래 찾기를 누르면 다시 연결돼요
+          {chat.waitingCount > 0 && (
+            <>
+              <br />
+              현재 {chat.waitingCount}명이 기다리고 있어요
+            </>
+          )}
         </EmptyState>
       </PhoneScreen>
     );
@@ -126,7 +92,7 @@ export function RandomChat({ page, onNavigate }: { page: RandomChatPage; onNavig
         footer={
           <>
             <MessageComposer disabled value="" placeholder="연결되면 입력할 수 있어요" />
-            <ActionButton onClick={startMatching}>찾기</ActionButton>
+            <ActionButton onClick={chat.startMatching}>찾기</ActionButton>
           </>
         }
       >
@@ -143,12 +109,12 @@ export function RandomChat({ page, onNavigate }: { page: RandomChatPage; onNavig
         footer={
           <>
             <MessageComposer
-              value={failedDraft}
+              value={chat.failedDraft}
               placeholder="다시 보내려면 눌러주세요"
-              onChange={setFailedDraft}
-              onSend={retry}
+              onChange={chat.setFailedDraft}
+              onSend={() => void chat.retry()}
             />
-            <ActionButton variant="outline" onClick={() => onNavigate("ended")}>
+            <ActionButton variant="outline" onClick={chat.leaveRoom}>
               끝내기
             </ActionButton>
           </>
@@ -165,14 +131,21 @@ export function RandomChat({ page, onNavigate }: { page: RandomChatPage; onNavig
       action={<StatusIndicator />}
       footer={
         <>
-          <MessageComposer value={input} placeholder="메시지 입력" onChange={setInput} onSend={send} />
-          <ActionButton variant="outline" onClick={() => onNavigate("ended")}>
+          <MessageComposer
+            disabled={!chat.encryptionReady}
+            value={input}
+            placeholder={chat.encryptionReady ? "메시지 입력" : "암호화 연결 중"}
+            onChange={setInput}
+            onSend={() => void chat.sendMessage(input).then((sent) => sent && setInput(""))}
+          />
+          <ActionButton onClick={chat.nextPartner}>다음 상대</ActionButton>
+          <ActionButton variant="outline" onClick={chat.leaveRoom}>
             끝내기
           </ActionButton>
         </>
       }
     >
-      <ChatThread messages={messages} viewer="user" />
+      <ChatThread messages={chat.messages} viewer="user" />
     </PhoneScreen>
   );
 }
