@@ -81,6 +81,10 @@ function isObject(value: unknown): value is JsonObject {
   return typeof value === "object" && value !== null;
 }
 
+function isApiEnvelope(value: unknown): value is JsonObject {
+  return isObject(value) && ("data" in value || "error" in value) && ("status" in value || "message" in value);
+}
+
 function isRole(value: unknown): value is Role {
   return value === "USER" || value === "ADMIN";
 }
@@ -188,9 +192,11 @@ function parseAdminThreads(value: unknown): AdminThreadsPage {
 }
 
 function parseError(status: number, value: unknown): ApiError {
-  if (!isObject(value)) return new ApiError("요청을 처리하지 못했어요.", status);
-  const fieldErrors = Array.isArray(value.fieldErrors)
-    ? value.fieldErrors.flatMap((fieldError) => {
+  const response = isObject(value) ? value : null;
+  const error = response && isObject(response.error) ? response.error : response;
+  if (!error) return new ApiError("요청을 처리하지 못했어요.", status);
+  const fieldErrors = Array.isArray(error.fieldErrors)
+    ? error.fieldErrors.flatMap((fieldError) => {
         if (!isObject(fieldError) || typeof fieldError.field !== "string") return [];
         const message = typeof fieldError.message === "string" ? fieldError.message : fieldError.reason;
         if (typeof message !== "string") return [];
@@ -198,9 +204,17 @@ function parseError(status: number, value: unknown): ApiError {
       })
     : [];
   return new ApiError(
-    typeof value.message === "string" && value.message ? value.message : "요청을 처리하지 못했어요.",
+    typeof error.message === "string" && error.message
+      ? error.message
+      : typeof response?.message === "string" && response.message
+        ? response.message
+        : "요청을 처리하지 못했어요.",
     status,
-    typeof value.code === "string" ? value.code : undefined,
+    typeof error.code === "string"
+      ? error.code
+      : typeof response?.code === "string"
+        ? response.code
+        : undefined,
     fieldErrors,
   );
 }
@@ -352,7 +366,7 @@ export class ApiClient {
   private async parseResponse<T>(response: Response) {
     const value = await readBody(response);
     if (!response.ok) throw parseError(response.status, value);
-    return value as T;
+    return (isApiEnvelope(value) && "data" in value ? value.data : value) as T;
   }
 
   private setSession(session: AuthSession) {
