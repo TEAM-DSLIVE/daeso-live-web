@@ -69,7 +69,13 @@ type SessionListener = (session: AuthSession | null) => void;
 const configuredApiBaseUrl =
   import.meta.env?.VITE_SERVER_URL?.trim() || import.meta.env?.VITE_API_BASE_URL?.trim() || "http://localhost:8080";
 const API_BASE_URL = normalizeApiBaseUrl(configuredApiBaseUrl);
-const HTTP_API_BASE_URL = import.meta.env.VITE_USE_API_PROXY === "true" ? "" : API_BASE_URL;
+const configuredHttpApiBaseUrl = import.meta.env.VITE_HTTP_API_BASE_URL?.trim();
+const HTTP_API_BASE_URL =
+  import.meta.env.VITE_USE_API_PROXY === "true"
+    ? ""
+    : configuredHttpApiBaseUrl
+      ? normalizeApiBaseUrl(configuredHttpApiBaseUrl)
+      : API_BASE_URL;
 
 function isObject(value: unknown): value is JsonObject {
   return typeof value === "object" && value !== null;

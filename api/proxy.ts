@@ -17,7 +17,15 @@ function readHeader(request: FunctionRequest, name: string) {
   return Array.isArray(value) ? value[0] : value;
 }
 
+function setCorsHeaders(response: FunctionResponse) {
+  response.setHeader("Access-Control-Allow-Origin", "*");
+  response.setHeader("Access-Control-Allow-Methods", "GET, HEAD, POST, PATCH, PUT, DELETE, OPTIONS");
+  response.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type, Accept");
+  response.setHeader("Access-Control-Max-Age", "3600");
+}
+
 export default async function handler(request: FunctionRequest, response: FunctionResponse) {
+  setCorsHeaders(response);
   const requestUrl = new URL(request.url ?? "/", "https://daeso-live-proxy.invalid");
   const path = requestUrl.searchParams.get("path")?.replace(/^\/+|\/+$/g, "");
   if (!path) return response.status(400).json({ message: "API 경로가 필요해요." });
