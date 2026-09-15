@@ -3,6 +3,18 @@ import test from "node:test";
 import { createRoomKeyState, decryptText, deriveRoomKey, encryptText } from "../src/features/random-chat/crypto.ts";
 import { messageSide } from "../src/shared/chat.ts";
 import { parseRoute } from "../src/shared/navigation.ts";
+import { normalizeApiBaseUrl } from "../src/shared/api-base.ts";
+import { readAidTokenFromSearch } from "../src/app/aid-auth.ts";
+
+test("AID token can be read from the WebView URL without storing it", () => {
+  assert.equal(readAidTokenFromSearch("?token=aid-token-123"), "aid-token-123");
+  assert.equal(readAidTokenFromSearch("?top=12"), null);
+});
+
+test("API base URL accepts a host-only deployment variable", () => {
+  assert.equal(normalizeApiBaseUrl("dslive.xn--h32bi4v.xn--3e0b707e/"), "https://dslive.xn--h32bi4v.xn--3e0b707e");
+  assert.equal(normalizeApiBaseUrl("https://api.example.com/"), "https://api.example.com");
+});
 
 test("hash routes user and admin screens", () => {
   assert.deepEqual(parseRoute("#settings"), { page: "settings" });
