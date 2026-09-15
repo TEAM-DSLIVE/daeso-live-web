@@ -10,7 +10,6 @@ type RoomData = {
   myNickname: string;
   peerNickname: string;
   initiator: boolean;
-  createdAt: string;
 };
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -41,7 +40,6 @@ function readRoomData(data: Record<string, unknown>): RoomData | null {
     myNickname: data.myNickname,
     peerNickname: data.peerNickname,
     initiator: data.initiator,
-    createdAt: typeof data.createdAt === "string" ? data.createdAt : new Date().toISOString(),
   };
 }
 
@@ -52,7 +50,6 @@ function roomDataFromState(state: ChatState): RoomData | null {
     myNickname: state.myNickname,
     peerNickname: state.peerNickname,
     initiator: state.initiator,
-    createdAt: state.roomCreatedAt ?? new Date().toISOString(),
   };
 }
 
@@ -66,8 +63,10 @@ export function useRandomChat(api: ApiClient, page: RandomChatPage, onNavigate: 
   const [endMessage, setEndMessage] = useState("대화가 끝났어요");
   const [waitingCount, setWaitingCount] = useState(0);
   const [encryptionReady, setEncryptionReady] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
   const pageRef = useRef(page);
   const socketRef = useRef<WebSocket | null>(null);
+  const connectingRef = useRef(false);
   const roomKeyRef = useRef<RoomKeyState | null>(null);
   const roomIdRef = useRef<string | null>(null);
   const keySentRef = useRef(false);
@@ -75,7 +74,6 @@ export function useRandomChat(api: ApiClient, page: RandomChatPage, onNavigate: 
   const closeTimerRef = useRef<number | null>(null);
   const pendingAcksRef = useRef(new Map<string, number>());
   const closingRef = useRef(false);
-  const reconnectingRef = useRef(false);
   const connectRef = useRef<() => void>(() => undefined);
 
   pageRef.current = page;
@@ -226,6 +224,9 @@ export function useRandomChat(api: ApiClient, page: RandomChatPage, onNavigate: 
             }
             return;
           }
+          const code = typeof frame.data.code === "string" ? frame.data.code : null;
+          const message = typeof frame.data.message === "string" ? frame.data.message : null;
+          setConnectionError(message ? `${message}${code ? ` (${code})` : ""}` : code ? `채팅 오류가 발생했어요. (${code})` : "채팅 오류가 발생했어요.");
           onNavigate("connection-error");
           return;
         default:
@@ -236,15 +237,24 @@ export function useRandomChat(api: ApiClient, page: RandomChatPage, onNavigate: 
   );
 
   const connect = useCallback(async () => {
-    if (socketRef.current || pageRef.current !== "matching") return;
+    if (socketRef.current || connectingRef.current || pageRef.current !== "matching") return;
+    connectingRef.current = true;
     closingRef.current = false;
+    setConnectionError(null);
     let state: ChatState;
     try {
       state = await api.getChatState();
-      if (closingRef.current || pageRef.current !== "matching") return;
+      if (closingRef.current || pageRef.current !== "matching") {
+        connectingRef.current = false;
+        return;
+      }
       const socket = api.createChatSocket();
       socketRef.current = socket;
+      let opened = false;
       socket.onopen = () => {
+        connectingRef.current = false;
+        opened = true;
+        setConnectionError(null);
         const room = roomDataFromState(state);
         if (room) void activateRoom(room);
         else {
@@ -257,7 +267,8 @@ export function useRandomChat(api: ApiClient, page: RandomChatPage, onNavigate: 
         if (frame) void handleFrame(frame);
       };
       socket.onerror = () => undefined;
-      socket.onclose = async (event) => {
+      socket.onclose = (event) => {
+        connectingRef.current = false;
         if (socketRef.current === socket) socketRef.current = null;
         if (pingTimerRef.current !== null) window.clearInterval(pingTimerRef.current);
         clearPendingAcks();
@@ -266,20 +277,15 @@ export function useRandomChat(api: ApiClient, page: RandomChatPage, onNavigate: 
         roomIdRef.current = null;
         keySentRef.current = false;
         if (closingRef.current || pageRef.current === "ended") return;
-        if (event.code === 1008 && !reconnectingRef.current) {
-          reconnectingRef.current = true;
-          try {
-            await api.refreshSession();
-            reconnectingRef.current = false;
-            connectRef.current();
-            return;
-          } catch {
-            reconnectingRef.current = false;
-          }
-        }
+        if (event.code === 1008) setConnectionError("같은 계정이 다른 기기에서 접속해 연결이 종료됐어요. (WS_1008)");
+        else if (!opened && event.code === 1006) setConnectionError("WebSocket handshake가 거절됐어요. AID 실행 origin과 서버 허용 목록을 확인해 주세요. (WS_1006)");
+        else if (event.code === 1009) setConnectionError("메시지가 너무 커서 WebSocket 연결이 종료됐어요. (WS_1009)");
+        else setConnectionError(`WebSocket 연결이 종료됐어요. (WS_${event.code})`);
         onNavigate("connection-error");
       };
     } catch {
+      connectingRef.current = false;
+      setConnectionError("채팅 상태를 확인하지 못했어요.");
       if (!closingRef.current && pageRef.current === "matching") onNavigate("connection-error");
     }
   }, [activateRoom, api, clearPendingAcks, handleFrame, onNavigate, sendFrame]);
@@ -331,6 +337,7 @@ export function useRandomChat(api: ApiClient, page: RandomChatPage, onNavigate: 
 
   const startMatching = useCallback(() => {
     closeSocket();
+    setConnectionError(null);
     setMessages([]);
     setFailedDraft("");
     setEndMessage("대화가 끝났어요");
@@ -388,6 +395,7 @@ export function useRandomChat(api: ApiClient, page: RandomChatPage, onNavigate: 
     setFailedDraft,
     endMessage,
     waitingCount,
+    connectionError,
     startMatching,
     findPartner,
     cancelMatching,

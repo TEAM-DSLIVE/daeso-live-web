@@ -24,7 +24,7 @@ export function RandomChat({ api, page, onNavigate }: { api: ApiClient; page: Ra
         footer={<ActionButton onClick={chat.startMatching}>다시 찾기</ActionButton>}
       >
         <EmptyState>
-          연결이 끊겼어요
+          {chat.connectionError ?? "연결이 끊겼어요"}
           <br />
           다시 시도해보세요
         </EmptyState>
@@ -36,7 +36,7 @@ export function RandomChat({ api, page, onNavigate }: { api: ApiClient; page: Ra
     return (
       <PhoneScreen
         title="대소라이브"
-        action={<StatusIndicator />}
+        action={<StatusIndicator label="매칭 중" />}
         centered
         footer={
           <>
@@ -60,7 +60,7 @@ export function RandomChat({ api, page, onNavigate }: { api: ApiClient; page: Ra
     return (
       <PhoneScreen
         title="대소라이브"
-        action={<StatusIndicator />}
+        action={<StatusIndicator label="대기 중" />}
         centered
         footer={
           <>
@@ -88,7 +88,6 @@ export function RandomChat({ api, page, onNavigate }: { api: ApiClient; page: Ra
     return (
       <PhoneScreen
         title="대소라이브"
-        action={<StatusIndicator />}
         footer={
           <>
             <MessageComposer disabled value="" placeholder="연결되면 입력할 수 있어요" />
@@ -105,7 +104,7 @@ export function RandomChat({ api, page, onNavigate }: { api: ApiClient; page: Ra
     return (
       <PhoneScreen
         title="대소라이브"
-        action={<StatusIndicator />}
+        action={<StatusIndicator status="error" label="전송 실패" />}
         footer={
           <>
             <MessageComposer
@@ -128,7 +127,7 @@ export function RandomChat({ api, page, onNavigate }: { api: ApiClient; page: Ra
   return (
     <PhoneScreen
       title="대소라이브"
-      action={<StatusIndicator />}
+      action={<StatusIndicator label="연결됨" />}
       footer={
         <>
           <MessageComposer

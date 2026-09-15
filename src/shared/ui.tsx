@@ -34,12 +34,12 @@ export function PhoneScreen({ title, action, children, footer, centered = false,
   );
 }
 
-export function StatusIndicator({ status = "online" }: { status?: "online" | "error" }) {
+export function StatusIndicator({ status = "online", label }: { status?: "online" | "error"; label?: string }) {
   const isError = status === "error";
   return (
     <span className={`status-indicator${isError ? " error" : ""}`}>
       <img alt="" height="6" src={isError ? errorDot : onlineDot} width="6" />
-      {isError ? "연결 끊김" : "8,412명 접속"}
+      {label ?? (isError ? "연결 끊김" : "연결됨")}
     </span>
   );
 }
