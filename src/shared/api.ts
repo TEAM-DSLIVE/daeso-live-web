@@ -191,8 +191,10 @@ function parseError(status: number, value: unknown): ApiError {
   if (!isObject(value)) return new ApiError("요청을 처리하지 못했어요.", status);
   const fieldErrors = Array.isArray(value.fieldErrors)
     ? value.fieldErrors.flatMap((fieldError) => {
-        if (!isObject(fieldError) || typeof fieldError.field !== "string" || typeof fieldError.message !== "string") return [];
-        return [{ field: fieldError.field, message: fieldError.message }];
+        if (!isObject(fieldError) || typeof fieldError.field !== "string") return [];
+        const message = typeof fieldError.message === "string" ? fieldError.message : fieldError.reason;
+        if (typeof message !== "string") return [];
+        return [{ field: fieldError.field, message }];
       })
     : [];
   return new ApiError(

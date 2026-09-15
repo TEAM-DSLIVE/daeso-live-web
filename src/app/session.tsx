@@ -61,6 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [retryCount, setRetryCount] = useState(0);
   const { send, subscribe } = useBridgeProvider();
   const aidToken = useRef<string | null>(null);
+  const authenticatingToken = useRef<string | null>(null);
 
   useEffect(() => {
     return api.setSessionListener((nextSession) => {
@@ -70,29 +71,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [api]);
 
   const authenticate = useCallback(
-    async (aidToken: string) => {
+    async (token: string) => {
+      if (api.getAccessToken() || authenticatingToken.current) return;
+      authenticatingToken.current = token;
       setStatus("loading");
       setError(null);
       try {
-        const nextSession = await api.login(aidToken);
+        const nextSession = await api.login(token);
         setSession(nextSession);
         setStatus("authenticated");
       } catch (nextError) {
         api.clearSession();
         setError(authErrorMessage(nextError));
         setStatus("error");
+      } finally {
+        if (authenticatingToken.current === token) authenticatingToken.current = null;
       }
     },
     [api],
   );
 
   useEffect(() => {
+    const localAidToken = import.meta.env.DEV ? import.meta.env.VITE_DAESO_LIVE_AID_TOKEN : undefined;
+    const urlAidToken = localAidToken ? null : takeAidTokenFromUrl();
+    const initialAidToken = aidToken.current ?? localAidToken ?? urlAidToken;
+
+    if (initialAidToken) {
+      aidToken.current = initialAidToken;
+      void authenticate(initialAidToken);
+      return;
+    }
+
+    if (!window.ReactNativeWebView?.postMessage) {
+      setError("도담도담 앱에서 실행해 주세요.");
+      setStatus("error");
+      return;
+    }
+
     let active = true;
     const unsubscribe = subscribe(Actions.OAUTH_GET_TOKEN, async (value) => {
-      if (!active) return {};
+      if (!active || api.getAccessToken() || authenticatingToken.current) return {};
       try {
-        aidToken.current = readAidToken(value);
-        await authenticate(aidToken.current);
+        const token = readAidToken(value);
+        aidToken.current = token;
+        await authenticate(token);
       } catch (nextError) {
         if (active) {
           setError(authErrorMessage(nextError));
@@ -101,10 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       return {};
     });
-    const localAidToken = import.meta.env.DEV ? import.meta.env.VITE_DAESO_LIVE_AID_TOKEN : undefined;
-    aidToken.current ??= localAidToken || takeAidTokenFromUrl();
-    if (aidToken.current) void authenticate(aidToken.current);
-    else send(Actions.OAUTH_GET_TOKEN);
+    send(Actions.OAUTH_GET_TOKEN);
     return () => {
       active = false;
       unsubscribe();

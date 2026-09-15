@@ -11,3 +11,9 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+interface Window {
+  ReactNativeWebView?: {
+    postMessage: (message: string) => void;
+  };
+}
