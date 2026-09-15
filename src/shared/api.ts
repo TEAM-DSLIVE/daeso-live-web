@@ -1,4 +1,4 @@
-import { normalizeApiBaseUrl } from "./api-base";
+import { normalizeApiBaseUrl } from "./api-base.ts";
 
 export type Role = "USER" | "ADMIN";
 
@@ -52,26 +52,33 @@ export type ApiFieldError = {
 };
 
 export class ApiError extends Error {
+  readonly status: number;
+  readonly code?: string;
+  readonly fieldErrors: ApiFieldError[];
+
   constructor(
     message: string,
-    readonly status: number,
-    readonly code?: string,
-    readonly fieldErrors: ApiFieldError[] = [],
+    status: number,
+    code?: string,
+    fieldErrors: ApiFieldError[] = [],
   ) {
     super(message);
     this.name = "ApiError";
+    this.status = status;
+    this.code = code;
+    this.fieldErrors = fieldErrors;
   }
 }
 
 type JsonObject = Record<string, unknown>;
-type SessionListener = (session: AuthSession | null) => void;
+type SessionListener = (session: AuthSession | null, error?: ApiError) => void;
 
-const configuredApiBaseUrl =
-  import.meta.env?.VITE_SERVER_URL?.trim() || import.meta.env?.VITE_API_BASE_URL?.trim() || "http://localhost:8080";
+const runtimeEnv: Record<string, string | undefined> = import.meta.env ?? {};
+const configuredApiBaseUrl = runtimeEnv.VITE_SERVER_URL?.trim() || runtimeEnv.VITE_API_BASE_URL?.trim() || "http://localhost:8080";
 const API_BASE_URL = normalizeApiBaseUrl(configuredApiBaseUrl);
-const configuredHttpApiBaseUrl = import.meta.env.VITE_HTTP_API_BASE_URL?.trim();
+const configuredHttpApiBaseUrl = runtimeEnv.VITE_HTTP_API_BASE_URL?.trim();
 const HTTP_API_BASE_URL =
-  import.meta.env.VITE_USE_API_PROXY === "true"
+  runtimeEnv.VITE_USE_API_PROXY === "true"
     ? ""
     : configuredHttpApiBaseUrl
       ? normalizeApiBaseUrl(configuredHttpApiBaseUrl)
@@ -245,9 +252,9 @@ export class ApiClient {
     };
   }
 
-  clearSession() {
+  clearSession(error?: ApiError) {
     this.session = null;
-    this.sessionListener?.(null);
+    this.sessionListener?.(null, error);
   }
 
   async login(aidToken: string) {
@@ -341,8 +348,9 @@ export class ApiClient {
         await this.refreshSession();
         return this.request<T>(path, init, false);
       } catch {
-        this.clearSession();
-        throw new ApiError("인증이 만료됐어요.", 401, "AUTH_401_3");
+        const error = new ApiError("인증이 만료됐어요.", 401, "AUTH_401_3");
+        if (this.session) this.clearSession(error);
+        throw error;
       }
     }
     return this.parseResponse<T>(response);

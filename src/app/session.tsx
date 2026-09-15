@@ -38,6 +38,9 @@ function readAidToken(value: unknown) {
 function authErrorMessage(error: unknown) {
   if (error instanceof ApiError && error.status === 403) return "이 서비스에 접근할 수 없는 계정이에요.";
   if (error instanceof ApiError && error.status === 0) return "서버에 연결할 수 없어요.";
+  if (error instanceof ApiError && error.code === "AUTH_401_6") {
+    return "도담도담 인증 코드를 받지 못했어요. 다시 인증해 주세요. (AUTH_401_6)";
+  }
   if (error instanceof Error && ["NOT_SUPPORT", "NOT_SUPPORTED"].includes(error.message)) {
     return "도담도담 인증 토큰을 받을 수 없어요.";
   }
@@ -68,9 +71,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const authenticatingToken = useRef<string | null>(null);
 
   useEffect(() => {
-    return api.setSessionListener((nextSession) => {
+    return api.setSessionListener((nextSession, nextError) => {
       setSession(nextSession);
       setStatus(nextSession ? "authenticated" : "error");
+      if (nextSession) setError(null);
+      else if (nextError) setError(authErrorMessage(nextError));
     });
   }, [api]);
 
@@ -86,6 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setStatus("authenticated");
       } catch (nextError) {
         api.clearSession();
+        aidToken.current = null;
         setError(authErrorMessage(nextError));
         setStatus("error");
       } finally {
@@ -96,9 +102,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
-    const localAidToken = import.meta.env.DEV ? import.meta.env.VITE_DAESO_LIVE_AID_TOKEN : undefined;
-    const urlAidToken = localAidToken ? null : takeAidTokenFromUrl();
-    const initialAidToken = aidToken.current ?? localAidToken ?? urlAidToken;
+    const isRetry = retryCount > 0;
+    const localAidToken = !isRetry && import.meta.env.DEV ? import.meta.env.VITE_DAESO_LIVE_AID_TOKEN : undefined;
+    const urlAidToken = !isRetry && !localAidToken ? takeAidTokenFromUrl() : null;
+    const initialAidToken = isRetry ? null : aidToken.current ?? localAidToken ?? urlAidToken;
 
     if (initialAidToken) {
       aidToken.current = initialAidToken;
@@ -134,7 +141,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [authenticate, retryCount, send, subscribe]);
 
-  const retry = useCallback(() => setRetryCount((count) => count + 1), []);
+  const retry = useCallback(() => {
+    if (authenticatingToken.current) return;
+    aidToken.current = null;
+    api.clearSession();
+    setRetryCount((count) => count + 1);
+  }, [api]);
   const value = { api, session, role: session?.role ?? null, status, error, retry };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
