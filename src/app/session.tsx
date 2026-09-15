@@ -41,6 +41,10 @@ function authErrorMessage(error: unknown) {
   if (error instanceof Error && ["NOT_SUPPORT", "NOT_SUPPORTED"].includes(error.message)) {
     return "도담도담 인증 토큰을 받을 수 없어요.";
   }
+  if (error instanceof ApiError) {
+    const identifier = error.code ?? `HTTP_${error.status}`;
+    return `${error.message} (${identifier})`;
+  }
   return error instanceof Error ? error.message : "인증에 실패했어요.";
 }
 
