@@ -29,6 +29,9 @@ export function SupportChat({
   const send = async () => {
     if (await onSend(input)) setInput("");
   };
+  const chatMessages = messages.length
+    ? [{ id: "support-inquiry-received", sender: "system" as const, text: "문의가 접수됐어요" }, ...messages]
+    : messages;
 
   return (
     <PhoneScreen
@@ -36,14 +39,15 @@ export function SupportChat({
       spacious
       footer={
         <>
-            <MessageComposer
-              disabled={sending}
-              maxLength={4000}
-              value={input}
-              placeholder="문의 내용을 입력"
-              onChange={setInput}
-              onSend={() => void send()}
-            />
+          <MessageComposer
+            disabled={sending}
+            dimmed
+            maxLength={4000}
+            value={input}
+            placeholder="문의 내용을 입력"
+            onChange={setInput}
+            onSend={() => void send()}
+          />
           <ActionButton variant="outline" onClick={() => onNavigate("settings")}>
             설정으로
           </ActionButton>
@@ -58,7 +62,7 @@ export function SupportChat({
       {loading && messages.length === 0 ? (
         <EmptyState>문의 내용을 불러오고 있어요</EmptyState>
       ) : messages.length > 0 ? (
-        <ChatThread messages={messages} viewer="user" />
+        <ChatThread autoScroll className="support-chat-thread" messages={chatMessages} viewer="user" />
       ) : (
         <EmptyState>아직 문의한 내용이 없어요</EmptyState>
       )}

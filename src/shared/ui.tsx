@@ -1,4 +1,4 @@
-import { FormEvent, ReactNode, CSSProperties } from "react";
+import { FormEvent, ReactNode, CSSProperties, useEffect, useRef } from "react";
 import { useSafeArea } from "@b1nd/aid-kit/safe-area-provider";
 import errorDot from "./assets/error-dot.svg";
 import onlineDot from "./assets/online-dot.svg";
@@ -48,13 +48,15 @@ export function ActionButton({
   children,
   onClick,
   variant = "primary",
+  compact = false,
 }: {
   children: ReactNode;
   onClick: () => void;
   variant?: "primary" | "outline";
+  compact?: boolean;
 }) {
   return (
-    <button className={`action-button ${variant}`} type="button" onClick={onClick}>
+    <button className={`action-button ${variant}${compact ? " compact" : ""}`} type="button" onClick={onClick}>
       {children}
     </button>
   );
@@ -65,18 +67,19 @@ type MessageComposerProps = {
   placeholder: string;
   disabled?: boolean;
   maxLength?: number;
+  dimmed?: boolean;
   onChange?: (value: string) => void;
   onSend?: () => void;
 };
 
-export function MessageComposer({ value, placeholder, disabled = false, maxLength, onChange, onSend }: MessageComposerProps) {
+export function MessageComposer({ value, placeholder, disabled = false, maxLength, dimmed = false, onChange, onSend }: MessageComposerProps) {
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!disabled && value.trim()) onSend?.();
   };
 
   return (
-    <form className="composer" onSubmit={submit}>
+    <form className={`composer${dimmed ? " dimmed" : ""}`} onSubmit={submit}>
       <input
         aria-label={placeholder}
         disabled={disabled}
@@ -92,9 +95,25 @@ export function MessageComposer({ value, placeholder, disabled = false, maxLengt
   );
 }
 
-export function ChatThread({ messages, viewer }: { messages: Message[]; viewer: MessageViewer }) {
+export function ChatThread({
+  messages,
+  viewer,
+  autoScroll = false,
+  className,
+}: {
+  messages: Message[];
+  viewer: MessageViewer;
+  autoScroll?: boolean;
+  className?: string;
+}) {
+  const endRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (autoScroll) endRef.current?.scrollIntoView({ block: "end" });
+  }, [autoScroll, messages.length]);
+
   return (
-    <div className="chat-thread" aria-live="polite">
+    <div className={`chat-thread${className ? ` ${className}` : ""}`} aria-live="polite">
       {messages.map((message) => {
         const side = messageSide(message.sender, viewer);
         return (
@@ -105,6 +124,7 @@ export function ChatThread({ messages, viewer }: { messages: Message[]; viewer: 
           </div>
         );
       })}
+      <div ref={endRef} aria-hidden="true" />
     </div>
   );
 }

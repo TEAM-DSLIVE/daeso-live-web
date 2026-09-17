@@ -5,6 +5,7 @@ import { ActionButton, ChatThread, EmptyState, MessageComposer, PhoneScreen, Sta
 import { useRandomChat } from "./model";
 
 type RandomChatPage = Extract<Page, "waiting" | "matching" | "chat" | "ended" | "connection-error" | "send-failed">;
+const ONLINE_LABEL = "8,412명 접속";
 
 export function RandomChat({ api, page, onNavigate }: { api: ApiClient; page: RandomChatPage; onNavigate: Navigate }) {
   const [input, setInput] = useState("");
@@ -24,7 +25,7 @@ export function RandomChat({ api, page, onNavigate }: { api: ApiClient; page: Ra
         footer={<ActionButton onClick={chat.startMatching}>다시 찾기</ActionButton>}
       >
         <EmptyState>
-          {chat.connectionError ?? "연결이 끊겼어요"}
+          연결이 끊겼어요
           <br />
           다시 시도해보세요
         </EmptyState>
@@ -36,7 +37,7 @@ export function RandomChat({ api, page, onNavigate }: { api: ApiClient; page: Ra
     return (
       <PhoneScreen
         title="대소라이브"
-        action={<StatusIndicator label="매칭 중" />}
+        action={<StatusIndicator label={ONLINE_LABEL} />}
         centered
         footer={
           <>
@@ -60,7 +61,7 @@ export function RandomChat({ api, page, onNavigate }: { api: ApiClient; page: Ra
     return (
       <PhoneScreen
         title="대소라이브"
-        action={<StatusIndicator label="대기 중" />}
+        action={<StatusIndicator label={ONLINE_LABEL} />}
         centered
         footer={
           <>
@@ -72,13 +73,7 @@ export function RandomChat({ api, page, onNavigate }: { api: ApiClient; page: Ra
         <EmptyState>
           아직 연결된 상대가 없어요
           <br />
-          아래 찾기를 누르면 다시 연결돼요
-          {chat.waitingCount > 0 && (
-            <>
-              <br />
-              현재 {chat.waitingCount}명이 기다리고 있어요
-            </>
-          )}
+          아래 찾기를 누르면 바로 연결돼요
         </EmptyState>
       </PhoneScreen>
     );
@@ -88,6 +83,7 @@ export function RandomChat({ api, page, onNavigate }: { api: ApiClient; page: Ra
     return (
       <PhoneScreen
         title="대소라이브"
+        action={<StatusIndicator label={ONLINE_LABEL} />}
         footer={
           <>
             <MessageComposer disabled value="" placeholder="연결되면 입력할 수 있어요" />
@@ -95,7 +91,7 @@ export function RandomChat({ api, page, onNavigate }: { api: ApiClient; page: Ra
           </>
         }
       >
-        <ChatThread messages={endedMessages} viewer="user" />
+        <ChatThread autoScroll messages={endedMessages} viewer="user" />
       </PhoneScreen>
     );
   }
@@ -104,7 +100,7 @@ export function RandomChat({ api, page, onNavigate }: { api: ApiClient; page: Ra
     return (
       <PhoneScreen
         title="대소라이브"
-        action={<StatusIndicator status="error" label="전송 실패" />}
+        action={<StatusIndicator label={ONLINE_LABEL} />}
         footer={
           <>
             <MessageComposer
@@ -113,13 +109,13 @@ export function RandomChat({ api, page, onNavigate }: { api: ApiClient; page: Ra
               onChange={chat.setFailedDraft}
               onSend={() => void chat.retry()}
             />
-            <ActionButton variant="outline" onClick={chat.leaveRoom}>
+            <ActionButton compact variant="outline" onClick={chat.leaveRoom}>
               끝내기
             </ActionButton>
           </>
         }
       >
-        <ChatThread messages={failedMessages} viewer="user" />
+        <ChatThread autoScroll messages={failedMessages} viewer="user" />
       </PhoneScreen>
     );
   }
@@ -127,7 +123,7 @@ export function RandomChat({ api, page, onNavigate }: { api: ApiClient; page: Ra
   return (
     <PhoneScreen
       title="대소라이브"
-      action={<StatusIndicator label="연결됨" />}
+      action={<StatusIndicator label={ONLINE_LABEL} />}
       footer={
         <>
           <MessageComposer
@@ -138,13 +134,13 @@ export function RandomChat({ api, page, onNavigate }: { api: ApiClient; page: Ra
             onSend={() => void chat.sendMessage(input).then((sent) => sent && setInput(""))}
           />
           <ActionButton onClick={chat.nextPartner}>다음 상대</ActionButton>
-          <ActionButton variant="outline" onClick={chat.leaveRoom}>
+          <ActionButton compact variant="outline" onClick={chat.leaveRoom}>
             끝내기
           </ActionButton>
         </>
       }
     >
-      <ChatThread messages={chat.messages} viewer="user" />
+      <ChatThread autoScroll messages={chat.messages} viewer="user" />
     </PhoneScreen>
   );
 }

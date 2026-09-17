@@ -21,16 +21,16 @@ export function AdminInquiry({ api, threadId, onNavigate }: AdminInquiryProps) {
           <p className="empty-state">문의 목록을 불러오고 있어요</p>
         ) : (
           <div className="admin-list">
-            {inquiry.threads.map((thread) => (
-            <button
-              className="admin-thread"
-              key={thread.threadId}
-              type="button"
-              onClick={() => onNavigate(`admin/${thread.threadId}`)}
-            >
-              <strong>익명 사용자 {thread.anonymousUserCode}</strong>
-              <time dateTime={thread.lastMessageAt}>{formatLastActive(thread.lastMessageAt)}</time>
-            </button>
+            {inquiry.threads.map((thread, index) => (
+              <button
+                className={`admin-thread${index === 0 ? " active" : ""}`}
+                key={thread.threadId}
+                type="button"
+                onClick={() => onNavigate(`admin/${thread.threadId}`)}
+              >
+                <strong>익명 사용자 {thread.anonymousUserCode}</strong>
+                <time dateTime={thread.lastMessageAt}>{formatLastActive(thread.lastMessageAt)}</time>
+              </button>
             ))}
           </div>
         )}
@@ -43,6 +43,9 @@ export function AdminInquiry({ api, threadId, onNavigate }: AdminInquiryProps) {
   const send = () => {
     void inquiry.send(input).then((sent) => sent && setInput(""));
   };
+  const chatMessages = inquiry.messages.length
+    ? [{ id: "admin-inquiry-received", sender: "system" as const, text: "문의가 접수됐어요" }, ...inquiry.messages]
+    : inquiry.messages;
 
   return (
     <PhoneScreen
@@ -57,7 +60,7 @@ export function AdminInquiry({ api, threadId, onNavigate }: AdminInquiryProps) {
             onChange={setInput}
             onSend={send}
           />
-          <ActionButton variant="outline" onClick={() => onNavigate("admin")}>
+          <ActionButton compact variant="outline" onClick={() => onNavigate("admin")}>
             문의 목록
           </ActionButton>
         </>
@@ -71,7 +74,7 @@ export function AdminInquiry({ api, threadId, onNavigate }: AdminInquiryProps) {
       {inquiry.loadingMessages && inquiry.messages.length === 0 ? (
         <p className="empty-state">문의 내용을 불러오고 있어요</p>
       ) : (
-        <ChatThread messages={inquiry.messages} viewer="admin" />
+        <ChatThread autoScroll messages={chatMessages} viewer="admin" />
       )}
       {inquiry.error && <p className="inline-error" role="alert">{inquiry.error}</p>}
     </PhoneScreen>

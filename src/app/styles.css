@@ -1,7 +1,7 @@
 :root {
   font-family: "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   color: #fff;
-  background: #202024;
+  background: var(--bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   --bg: #000;
@@ -11,6 +11,11 @@
   --faint: rgba(255, 255, 255, 0.34);
   --line: rgba(255, 255, 255, 0.14);
   --chip: rgba(255, 255, 255, 0.07);
+  --card-line: rgba(255, 255, 255, 0.14);
+  --button-line: rgba(255, 255, 255, 0.14);
+  --admin-chip: rgba(255, 255, 255, 0.06);
+  --admin-line: rgba(255, 255, 255, 0.14);
+  --info-text: rgba(255, 255, 255, 0.7);
   --accent: #7c6bff;
   --on-accent: #fff;
   --online: #22c7a9;
@@ -108,6 +113,7 @@ input:focus-visible {
   gap: 7px;
   color: var(--dim);
   font-size: 12.5px;
+  font-weight: 500;
   white-space: nowrap;
 }
 
@@ -207,6 +213,10 @@ input:focus-visible {
   opacity: 0.5;
 }
 
+.composer.dimmed input {
+  opacity: 0.5;
+}
+
 .composer button {
   display: grid;
   width: 48px;
@@ -220,6 +230,8 @@ input:focus-visible {
   cursor: pointer;
   font-size: 20px;
   font-weight: 700;
+  font-family: Inter, system-ui, sans-serif;
+  line-height: normal;
 }
 
 .composer button:disabled {
@@ -229,25 +241,31 @@ input:focus-visible {
 
 .action-button {
   width: 100%;
-  min-height: 50px;
-  padding: 13px 18px;
+  padding: 17px 18px;
   border-radius: 16px;
   cursor: pointer;
   font-size: 16px;
   font-weight: 700;
+  letter-spacing: -0.3px;
+  line-height: normal;
 }
 
 .action-button.primary {
-  min-height: 53px;
   color: var(--on-accent);
   background: var(--accent);
-  border: 1px solid transparent;
+  border: 0;
 }
 
 .action-button.outline {
   color: var(--fg);
   background: transparent;
-  border: 1px solid var(--line);
+  border: 1px solid var(--button-line);
+}
+
+.action-button.compact {
+  padding: 16px 18px;
+  font-size: 15px;
+  letter-spacing: normal;
 }
 
 .chat-thread {
@@ -255,6 +273,10 @@ input:focus-visible {
   width: 100%;
   flex-direction: column;
   gap: 9px;
+}
+
+.support-chat-thread {
+  gap: 12px;
 }
 
 .message-row {
@@ -315,7 +337,7 @@ input:focus-visible {
 .card-list,
 .admin-list {
   width: calc(100% - 28px);
-  margin: 14px;
+  margin: 14px 14px 0;
 }
 
 .menu-card,
@@ -324,7 +346,7 @@ input:focus-visible {
   width: 100%;
   color: var(--fg);
   background: var(--chip);
-  border: 1px solid var(--line);
+  border: 1px solid var(--card-line);
   border-radius: 16px;
 }
 
@@ -358,9 +380,14 @@ button.menu-card {
 .menu-card small,
 .info-card p {
   margin: 0;
-  color: var(--dim);
+  color: var(--info-text);
   font-size: 13.5px;
-  line-height: 1.55;
+  line-height: normal;
+}
+
+.menu-card small {
+  color: var(--dim);
+  line-height: normal;
 }
 
 .chevron {
@@ -392,6 +419,9 @@ button.menu-card {
   justify-content: space-between;
   gap: 8px;
   padding: 12px;
+  background: var(--admin-chip);
+  border-color: var(--admin-line);
+  border-radius: 14px;
   cursor: pointer;
   text-align: left;
 }
@@ -431,6 +461,11 @@ button.menu-card {
     --faint: rgba(0, 0, 0, 0.38);
     --line: rgba(0, 0, 0, 0.12);
     --chip: rgba(0, 0, 0, 0.05);
+    --card-line: rgba(0, 0, 0, 0.14);
+    --button-line: rgba(0, 0, 0, 0.14);
+    --admin-chip: rgba(0, 0, 0, 0.06);
+    --admin-line: rgba(0, 0, 0, 0.14);
+    --info-text: rgba(0, 0, 0, 0.7);
   }
 }
 
